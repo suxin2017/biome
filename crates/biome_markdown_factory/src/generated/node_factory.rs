@@ -59,34 +59,21 @@ pub fn md_hash(hash_token: SyntaxToken) -> MdHash {
         [Some(SyntaxElement::Token(hash_token))],
     ))
 }
-pub fn md_header(before: MdHashList, after: MdHashList) -> MdHeaderBuilder {
-    MdHeaderBuilder {
-        before,
-        after,
-        md_paragraph: None,
-    }
+pub fn md_header(before: MdHashList, content: MdHeaderContent, after: MdHashList) -> MdHeader {
+    MdHeader::unwrap_cast(SyntaxNode::new_detached(
+        MarkdownSyntaxKind::MD_HEADER,
+        [
+            Some(SyntaxElement::Node(before.into_syntax())),
+            Some(SyntaxElement::Node(content.into_syntax())),
+            Some(SyntaxElement::Node(after.into_syntax())),
+        ],
+    ))
 }
-pub struct MdHeaderBuilder {
-    before: MdHashList,
-    after: MdHashList,
-    md_paragraph: Option<MdParagraph>,
-}
-impl MdHeaderBuilder {
-    pub fn with_md_paragraph(mut self, md_paragraph: MdParagraph) -> Self {
-        self.md_paragraph = Some(md_paragraph);
-        self
-    }
-    pub fn build(self) -> MdHeader {
-        MdHeader::unwrap_cast(SyntaxNode::new_detached(
-            MarkdownSyntaxKind::MD_HEADER,
-            [
-                Some(SyntaxElement::Node(self.before.into_syntax())),
-                self.md_paragraph
-                    .map(|token| SyntaxElement::Node(token.into_syntax())),
-                Some(SyntaxElement::Node(self.after.into_syntax())),
-            ],
-        ))
-    }
+pub fn md_header_content(md_inline_list: MdInlineList) -> MdHeaderContent {
+    MdHeaderContent::unwrap_cast(SyntaxNode::new_detached(
+        MarkdownSyntaxKind::MD_HEADER_CONTENT,
+        [Some(SyntaxElement::Node(md_inline_list.into_syntax()))],
+    ))
 }
 pub fn md_html_block(md_textual: MdTextual) -> MdHtmlBlock {
     MdHtmlBlock::unwrap_cast(SyntaxNode::new_detached(
@@ -211,12 +198,10 @@ pub fn md_order_list_item(md_bullet_list: MdBulletList) -> MdOrderListItem {
         [Some(SyntaxElement::Node(md_bullet_list.into_syntax()))],
     ))
 }
-pub fn md_paragraph(md_paragraph_item_list: MdParagraphItemList) -> MdParagraph {
+pub fn md_paragraph(md_inline_list: MdInlineList) -> MdParagraph {
     MdParagraph::unwrap_cast(SyntaxNode::new_detached(
         MarkdownSyntaxKind::MD_PARAGRAPH,
-        [Some(SyntaxElement::Node(
-            md_paragraph_item_list.into_syntax(),
-        ))],
+        [Some(SyntaxElement::Node(md_inline_list.into_syntax()))],
     ))
 }
 pub fn md_quote(any_md_block: AnyMdBlock) -> MdQuote {
@@ -285,6 +270,18 @@ where
             .map(|item| Some(item.into_syntax().into())),
     ))
 }
+pub fn md_inline_list<I>(items: I) -> MdInlineList
+where
+    I: IntoIterator<Item = AnyMdInline>,
+    I::IntoIter: ExactSizeIterator,
+{
+    MdInlineList::unwrap_cast(SyntaxNode::new_detached(
+        MarkdownSyntaxKind::MD_INLINE_LIST,
+        items
+            .into_iter()
+            .map(|item| Some(item.into_syntax().into())),
+    ))
+}
 pub fn md_order_list<I>(items: I) -> MdOrderList
 where
     I: IntoIterator<Item = AnyCodeBlock>,
@@ -292,18 +289,6 @@ where
 {
     MdOrderList::unwrap_cast(SyntaxNode::new_detached(
         MarkdownSyntaxKind::MD_ORDER_LIST,
-        items
-            .into_iter()
-            .map(|item| Some(item.into_syntax().into())),
-    ))
-}
-pub fn md_paragraph_item_list<I>(items: I) -> MdParagraphItemList
-where
-    I: IntoIterator<Item = AnyMdInline>,
-    I::IntoIter: ExactSizeIterator,
-{
-    MdParagraphItemList::unwrap_cast(SyntaxNode::new_detached(
-        MarkdownSyntaxKind::MD_PARAGRAPH_ITEM_LIST,
         items
             .into_iter()
             .map(|item| Some(item.into_syntax().into())),

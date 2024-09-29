@@ -5,7 +5,7 @@ use biome_parser::lexer::BufferedLexer;
 use biome_parser::prelude::{BumpWithContext, TokenSource};
 use biome_parser::token_source::{TokenSourceWithBufferedLexer, Trivia};
 use biome_parser::{diagnostic::ParseDiagnostic, token_source::TokenSourceCheckpoint};
-use biome_rowan::{TextRange, TriviaPieceKind};
+use biome_rowan::{TextRange, TextSize, TriviaPieceKind};
 
 pub(crate) struct MarkdownTokenSource<'source> {
     lexer: BufferedLexer<MarkdownSyntaxKind, MarkdownLexer<'source>>,
@@ -84,6 +84,17 @@ impl<'source> MarkdownTokenSource<'source> {
             TriviaPieceKind::Whitespace => count + u32::from(b.len()) as usize,
             _ => count,
         })
+    }
+
+    /// Returns the position of the token closest to the newline
+    pub fn before_newline_position(&self) -> TextSize {
+        let current_line = self
+            .trivia_list
+            .iter()
+            .rev()
+            .find(|item| matches!(item.kind(), TriviaPieceKind::Newline));
+
+        current_line.map_or(TextSize::from(0), |item| item.offset())
     }
 
     #[allow(dead_code)]

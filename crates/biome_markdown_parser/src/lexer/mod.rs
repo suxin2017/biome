@@ -181,6 +181,7 @@ impl<'src> MarkdownLexer<'src> {
         match dispatched {
             WHS => self.consume_newline_or_whitespace(),
             MUL | MIN | IDT => self.consume_thematic_break_literal(),
+            HAS => self.eat_byte(HASH),
             _ => self.consume_textual(),
         }
     }
@@ -190,7 +191,6 @@ impl<'src> MarkdownLexer<'src> {
     }
 
     /// Bumps the current byte and creates a lexed token of the passed in kind
-    #[allow(dead_code)]
     fn eat_byte(&mut self, tok: MarkdownSyntaxKind) -> MarkdownSyntaxKind {
         self.advance(1);
         tok

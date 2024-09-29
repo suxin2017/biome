@@ -40,6 +40,10 @@ macro_rules! map_syntax_node {
                     let $pattern = unsafe { $crate::MdHeader::new_unchecked(node) };
                     $body
                 }
+                $crate::MarkdownSyntaxKind::MD_HEADER_CONTENT => {
+                    let $pattern = unsafe { $crate::MdHeaderContent::new_unchecked(node) };
+                    $body
+                }
                 $crate::MarkdownSyntaxKind::MD_HTML_BLOCK => {
                     let $pattern = unsafe { $crate::MdHtmlBlock::new_unchecked(node) };
                     $body
@@ -116,12 +120,12 @@ macro_rules! map_syntax_node {
                     let $pattern = unsafe { $crate::MdHashList::new_unchecked(node) };
                     $body
                 }
-                $crate::MarkdownSyntaxKind::MD_ORDER_LIST => {
-                    let $pattern = unsafe { $crate::MdOrderList::new_unchecked(node) };
+                $crate::MarkdownSyntaxKind::MD_INLINE_LIST => {
+                    let $pattern = unsafe { $crate::MdInlineList::new_unchecked(node) };
                     $body
                 }
-                $crate::MarkdownSyntaxKind::MD_PARAGRAPH_ITEM_LIST => {
-                    let $pattern = unsafe { $crate::MdParagraphItemList::new_unchecked(node) };
+                $crate::MarkdownSyntaxKind::MD_ORDER_LIST => {
+                    let $pattern = unsafe { $crate::MdOrderList::new_unchecked(node) };
                     $body
                 }
                 _ => unreachable!(),

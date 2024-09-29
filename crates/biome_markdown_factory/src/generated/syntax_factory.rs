@@ -133,7 +133,7 @@ impl SyntaxFactory for MarkdownSyntaxFactory {
                 }
                 slots.next_slot();
                 if let Some(element) = &current_element {
-                    if MdParagraph::can_cast(element.kind()) {
+                    if MdHeaderContent::can_cast(element.kind()) {
                         slots.mark_present();
                         current_element = elements.next();
                     }
@@ -153,6 +153,25 @@ impl SyntaxFactory for MarkdownSyntaxFactory {
                     );
                 }
                 slots.into_node(MD_HEADER, children)
+            }
+            MD_HEADER_CONTENT => {
+                let mut elements = (&children).into_iter();
+                let mut slots: RawNodeSlots<1usize> = RawNodeSlots::default();
+                let mut current_element = elements.next();
+                if let Some(element) = &current_element {
+                    if MdInlineList::can_cast(element.kind()) {
+                        slots.mark_present();
+                        current_element = elements.next();
+                    }
+                }
+                slots.next_slot();
+                if current_element.is_some() {
+                    return RawSyntaxNode::new(
+                        MD_HEADER_CONTENT.to_bogus(),
+                        children.into_iter().map(Some),
+                    );
+                }
+                slots.into_node(MD_HEADER_CONTENT, children)
             }
             MD_HTML_BLOCK => {
                 let mut elements = (&children).into_iter();
@@ -372,7 +391,7 @@ impl SyntaxFactory for MarkdownSyntaxFactory {
                 let mut slots: RawNodeSlots<1usize> = RawNodeSlots::default();
                 let mut current_element = elements.next();
                 if let Some(element) = &current_element {
-                    if MdParagraphItemList::can_cast(element.kind()) {
+                    if MdInlineList::can_cast(element.kind()) {
                         slots.mark_present();
                         current_element = elements.next();
                     }
@@ -481,10 +500,8 @@ impl SyntaxFactory for MarkdownSyntaxFactory {
             MD_BLOCK_LIST => Self::make_node_list_syntax(kind, children, AnyMdBlock::can_cast),
             MD_BULLET_LIST => Self::make_node_list_syntax(kind, children, AnyCodeBlock::can_cast),
             MD_HASH_LIST => Self::make_node_list_syntax(kind, children, MdHash::can_cast),
+            MD_INLINE_LIST => Self::make_node_list_syntax(kind, children, AnyMdInline::can_cast),
             MD_ORDER_LIST => Self::make_node_list_syntax(kind, children, AnyCodeBlock::can_cast),
-            MD_PARAGRAPH_ITEM_LIST => {
-                Self::make_node_list_syntax(kind, children, AnyMdInline::can_cast)
-            }
             _ => unreachable!("Is {:?} a token?", kind),
         }
     }

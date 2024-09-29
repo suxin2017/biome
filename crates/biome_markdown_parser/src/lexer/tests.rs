@@ -162,3 +162,11 @@ _ _ _ _  _ "#,
         MD_THEMATIC_BREAK_LITERAL:11,
     }
 }
+
+#[test]
+fn hash_token() {
+    assert_lex! {
+        "#",
+        HASH:1,
+    }
+}

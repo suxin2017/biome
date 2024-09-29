@@ -56,7 +56,17 @@ AnyContainerBlock = MdQuote | MdBulletListItem | MdOrderListItem
 
 
 // h1..h6
-MdHeader = before:MdHashList MdParagraph? after:MdHashList
+// # foo
+// ## foo
+// ### foo
+// #### foo
+// ##### foo
+// ###### foo
+MdHeader = before:MdHashList 
+           content:MdHeaderContent
+           after:MdHashList
+           
+MdHeaderContent = MdInlineList
 
 MdHashList = MdHash*
 
@@ -97,9 +107,9 @@ MdBulletList = AnyCodeBlock*
 MdOrderList = AnyCodeBlock*
 
 
-MdParagraph = MdParagraphItemList
+MdParagraph = MdInlineList
 
-MdParagraphItemList = AnyMdInline*
+MdInlineList = AnyMdInline*
 
 AnyMdInline = MdInlineCode | MdInlineEmphasis | MdInlineLink | MdInlineImage
                |  MdHtmlBlock | MdHardLine | MdSoftBreak

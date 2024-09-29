@@ -62,16 +62,24 @@ impl MdHeader {
                 .splice_slots(0usize..=0usize, once(Some(element.into_syntax().into()))),
         )
     }
-    pub fn with_md_paragraph(self, element: Option<MdParagraph>) -> Self {
-        Self::unwrap_cast(self.syntax.splice_slots(
-            1usize..=1usize,
-            once(element.map(|element| element.into_syntax().into())),
-        ))
+    pub fn with_content(self, element: MdHeaderContent) -> Self {
+        Self::unwrap_cast(
+            self.syntax
+                .splice_slots(1usize..=1usize, once(Some(element.into_syntax().into()))),
+        )
     }
     pub fn with_after(self, element: MdHashList) -> Self {
         Self::unwrap_cast(
             self.syntax
                 .splice_slots(2usize..=2usize, once(Some(element.into_syntax().into()))),
+        )
+    }
+}
+impl MdHeaderContent {
+    pub fn with_md_inline_list(self, element: MdInlineList) -> Self {
+        Self::unwrap_cast(
+            self.syntax
+                .splice_slots(0usize..=0usize, once(Some(element.into_syntax().into()))),
         )
     }
 }
@@ -184,7 +192,7 @@ impl MdOrderListItem {
     }
 }
 impl MdParagraph {
-    pub fn with_md_paragraph_item_list(self, element: MdParagraphItemList) -> Self {
+    pub fn with_md_inline_list(self, element: MdInlineList) -> Self {
         Self::unwrap_cast(
             self.syntax
                 .splice_slots(0usize..=0usize, once(Some(element.into_syntax().into()))),

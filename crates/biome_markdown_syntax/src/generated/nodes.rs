@@ -225,15 +225,15 @@ impl MdHeader {
     pub fn as_fields(&self) -> MdHeaderFields {
         MdHeaderFields {
             before: self.before(),
-            md_paragraph: self.md_paragraph(),
+            content: self.content(),
             after: self.after(),
         }
     }
     pub fn before(&self) -> MdHashList {
         support::list(&self.syntax, 0usize)
     }
-    pub fn md_paragraph(&self) -> Option<MdParagraph> {
-        support::node(&self.syntax, 1usize)
+    pub fn content(&self) -> SyntaxResult<MdHeaderContent> {
+        support::required_node(&self.syntax, 1usize)
     }
     pub fn after(&self) -> MdHashList {
         support::list(&self.syntax, 2usize)
@@ -250,8 +250,43 @@ impl Serialize for MdHeader {
 #[derive(Serialize)]
 pub struct MdHeaderFields {
     pub before: MdHashList,
-    pub md_paragraph: Option<MdParagraph>,
+    pub content: SyntaxResult<MdHeaderContent>,
     pub after: MdHashList,
+}
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct MdHeaderContent {
+    pub(crate) syntax: SyntaxNode,
+}
+impl MdHeaderContent {
+    #[doc = r" Create an AstNode from a SyntaxNode without checking its kind"]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r" This function must be guarded with a call to [AstNode::can_cast]"]
+    #[doc = r" or a match on [SyntaxNode::kind]"]
+    #[inline]
+    pub const unsafe fn new_unchecked(syntax: SyntaxNode) -> Self {
+        Self { syntax }
+    }
+    pub fn as_fields(&self) -> MdHeaderContentFields {
+        MdHeaderContentFields {
+            md_inline_list: self.md_inline_list(),
+        }
+    }
+    pub fn md_inline_list(&self) -> MdInlineList {
+        support::list(&self.syntax, 0usize)
+    }
+}
+impl Serialize for MdHeaderContent {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_fields().serialize(serializer)
+    }
+}
+#[derive(Serialize)]
+pub struct MdHeaderContentFields {
+    pub md_inline_list: MdInlineList,
 }
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct MdHtmlBlock {
@@ -614,10 +649,10 @@ impl MdParagraph {
     }
     pub fn as_fields(&self) -> MdParagraphFields {
         MdParagraphFields {
-            md_paragraph_item_list: self.md_paragraph_item_list(),
+            md_inline_list: self.md_inline_list(),
         }
     }
-    pub fn md_paragraph_item_list(&self) -> MdParagraphItemList {
+    pub fn md_inline_list(&self) -> MdInlineList {
         support::list(&self.syntax, 0usize)
     }
 }
@@ -631,7 +666,7 @@ impl Serialize for MdParagraph {
 }
 #[derive(Serialize)]
 pub struct MdParagraphFields {
-    pub md_paragraph_item_list: MdParagraphItemList,
+    pub md_inline_list: MdInlineList,
 }
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct MdQuote {
@@ -1210,10 +1245,7 @@ impl std::fmt::Debug for MdHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MdHeader")
             .field("before", &self.before())
-            .field(
-                "md_paragraph",
-                &support::DebugOptionalElement(self.md_paragraph()),
-            )
+            .field("content", &support::DebugSyntaxResult(self.content()))
             .field("after", &self.after())
             .finish()
     }
@@ -1225,6 +1257,44 @@ impl From<MdHeader> for SyntaxNode {
 }
 impl From<MdHeader> for SyntaxElement {
     fn from(n: MdHeader) -> SyntaxElement {
+        n.syntax.into()
+    }
+}
+impl AstNode for MdHeaderContent {
+    type Language = Language;
+    const KIND_SET: SyntaxKindSet<Language> =
+        SyntaxKindSet::from_raw(RawSyntaxKind(MD_HEADER_CONTENT as u16));
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == MD_HEADER_CONTENT
+    }
+    fn cast(syntax: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(syntax.kind()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        &self.syntax
+    }
+    fn into_syntax(self) -> SyntaxNode {
+        self.syntax
+    }
+}
+impl std::fmt::Debug for MdHeaderContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MdHeaderContent")
+            .field("md_inline_list", &self.md_inline_list())
+            .finish()
+    }
+}
+impl From<MdHeaderContent> for SyntaxNode {
+    fn from(n: MdHeaderContent) -> SyntaxNode {
+        n.syntax
+    }
+}
+impl From<MdHeaderContent> for SyntaxElement {
+    fn from(n: MdHeaderContent) -> SyntaxElement {
         n.syntax.into()
     }
 }
@@ -1603,7 +1673,7 @@ impl AstNode for MdParagraph {
 impl std::fmt::Debug for MdParagraph {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MdParagraph")
-            .field("md_paragraph_item_list", &self.md_paragraph_item_list())
+            .field("md_inline_list", &self.md_inline_list())
             .finish()
     }
 }
@@ -2327,6 +2397,11 @@ impl std::fmt::Display for MdHeader {
         std::fmt::Display::fmt(self.syntax(), f)
     }
 }
+impl std::fmt::Display for MdHeaderContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self.syntax(), f)
+    }
+}
 impl std::fmt::Display for MdHtmlBlock {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Display::fmt(self.syntax(), f)
@@ -2705,6 +2780,88 @@ impl IntoIterator for MdHashList {
     }
 }
 #[derive(Clone, Eq, PartialEq, Hash)]
+pub struct MdInlineList {
+    syntax_list: SyntaxList,
+}
+impl MdInlineList {
+    #[doc = r" Create an AstNode from a SyntaxNode without checking its kind"]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r" This function must be guarded with a call to [AstNode::can_cast]"]
+    #[doc = r" or a match on [SyntaxNode::kind]"]
+    #[inline]
+    pub unsafe fn new_unchecked(syntax: SyntaxNode) -> Self {
+        Self {
+            syntax_list: syntax.into_list(),
+        }
+    }
+}
+impl AstNode for MdInlineList {
+    type Language = Language;
+    const KIND_SET: SyntaxKindSet<Language> =
+        SyntaxKindSet::from_raw(RawSyntaxKind(MD_INLINE_LIST as u16));
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == MD_INLINE_LIST
+    }
+    fn cast(syntax: SyntaxNode) -> Option<MdInlineList> {
+        if Self::can_cast(syntax.kind()) {
+            Some(MdInlineList {
+                syntax_list: syntax.into_list(),
+            })
+        } else {
+            None
+        }
+    }
+    fn syntax(&self) -> &SyntaxNode {
+        self.syntax_list.node()
+    }
+    fn into_syntax(self) -> SyntaxNode {
+        self.syntax_list.into_node()
+    }
+}
+impl Serialize for MdInlineList {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        for e in self.iter() {
+            seq.serialize_element(&e)?;
+        }
+        seq.end()
+    }
+}
+impl AstNodeList for MdInlineList {
+    type Language = Language;
+    type Node = AnyMdInline;
+    fn syntax_list(&self) -> &SyntaxList {
+        &self.syntax_list
+    }
+    fn into_syntax_list(self) -> SyntaxList {
+        self.syntax_list
+    }
+}
+impl Debug for MdInlineList {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("MdInlineList ")?;
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+impl IntoIterator for &MdInlineList {
+    type Item = AnyMdInline;
+    type IntoIter = AstNodeListIterator<Language, AnyMdInline>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+impl IntoIterator for MdInlineList {
+    type Item = AnyMdInline;
+    type IntoIter = AstNodeListIterator<Language, AnyMdInline>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct MdOrderList {
     syntax_list: SyntaxList,
 }
@@ -2782,88 +2939,6 @@ impl IntoIterator for &MdOrderList {
 impl IntoIterator for MdOrderList {
     type Item = AnyCodeBlock;
     type IntoIter = AstNodeListIterator<Language, AnyCodeBlock>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub struct MdParagraphItemList {
-    syntax_list: SyntaxList,
-}
-impl MdParagraphItemList {
-    #[doc = r" Create an AstNode from a SyntaxNode without checking its kind"]
-    #[doc = r""]
-    #[doc = r" # Safety"]
-    #[doc = r" This function must be guarded with a call to [AstNode::can_cast]"]
-    #[doc = r" or a match on [SyntaxNode::kind]"]
-    #[inline]
-    pub unsafe fn new_unchecked(syntax: SyntaxNode) -> Self {
-        Self {
-            syntax_list: syntax.into_list(),
-        }
-    }
-}
-impl AstNode for MdParagraphItemList {
-    type Language = Language;
-    const KIND_SET: SyntaxKindSet<Language> =
-        SyntaxKindSet::from_raw(RawSyntaxKind(MD_PARAGRAPH_ITEM_LIST as u16));
-    fn can_cast(kind: SyntaxKind) -> bool {
-        kind == MD_PARAGRAPH_ITEM_LIST
-    }
-    fn cast(syntax: SyntaxNode) -> Option<MdParagraphItemList> {
-        if Self::can_cast(syntax.kind()) {
-            Some(MdParagraphItemList {
-                syntax_list: syntax.into_list(),
-            })
-        } else {
-            None
-        }
-    }
-    fn syntax(&self) -> &SyntaxNode {
-        self.syntax_list.node()
-    }
-    fn into_syntax(self) -> SyntaxNode {
-        self.syntax_list.into_node()
-    }
-}
-impl Serialize for MdParagraphItemList {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut seq = serializer.serialize_seq(Some(self.len()))?;
-        for e in self.iter() {
-            seq.serialize_element(&e)?;
-        }
-        seq.end()
-    }
-}
-impl AstNodeList for MdParagraphItemList {
-    type Language = Language;
-    type Node = AnyMdInline;
-    fn syntax_list(&self) -> &SyntaxList {
-        &self.syntax_list
-    }
-    fn into_syntax_list(self) -> SyntaxList {
-        self.syntax_list
-    }
-}
-impl Debug for MdParagraphItemList {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str("MdParagraphItemList ")?;
-        f.debug_list().entries(self.iter()).finish()
-    }
-}
-impl IntoIterator for &MdParagraphItemList {
-    type Item = AnyMdInline;
-    type IntoIter = AstNodeListIterator<Language, AnyMdInline>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-impl IntoIterator for MdParagraphItemList {
-    type Item = AnyMdInline;
-    type IntoIter = AstNodeListIterator<Language, AnyMdInline>;
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
